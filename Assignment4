@@ -1,0 +1,81 @@
+import control 
+import numpy as np 
+import matplotlib.pyplot as plt 
+ 
+plt.figure(2)#close('all') 
+# Define the output time range 
+t=np.arange(0,6,.01) 
+n = len(t) 
+# sys = GDc/(1+GDc) 
+# G=Kt/Ra/(Jm*s^2+(1*b+Kt*Ke/Ra)*s) 
+# Dc = Kp, Kp + KI/s, Kp + KI/s +Kd*s 
+ 
+# Params 
+Jm = 1.13e-2/8; b = .028/8; La = .10; Ra = .45; 
+Kt = 0.067 ; Ke = 0.067; 
+KP = 2; KI = 13.5; KD = .2; 
+ 
+# System 
+den = [1*Jm, 1*b+Kt*Ke/Ra,0] 
+G=control.tf(Kt/Ra,den)
+ 
+# System with P-controller 
+DcP= KP # controller 
+sysP = G*DcP/(1+G*DcP) # closed loop TR 
+yP = control.step_response(sysP,t) # step response  
+ 
+# System with PI-controller 
+DcPI= (KP + KI*control.tf([1],[1,0])) # controller  
+sysPI = DcPI*G/(1+DcPI*G) # closed loop TR 
+yPI = control.step_response(sysPI,t) # step response  
+ 
+# System with PID-controller 
+DcPID= KP + KI*control.tf([1],[1,0]) + KD*control.tf([1,0],[1]) # controller 
+sysPID = DcPID*G/(1+DcPID*G) # closed loop TR 
+yPID = control.step_response(sysPID,t) # step response  
+ 
+#Find the system types - P 
+sysS = (1/(1+DcP*G) ) #sensitivity 
+print(sysS) 
+zeros = control.zero(sysS) #zeros in sensitivity 
+sysType = len(zeros)-np.count_nonzero(zeros) #system type by zeros at origin 
+ 
+sysR=control.tf(1,(1,0)) 
+essP=control.evalfr(control.minreal(sysS*sysR),0) 
+print('System type =' , sysType,'ess = ', essP) 
+ 
+#System type - PI 
+sysS = control.minreal(1/(1+DcPI*G)) #sensitivity 
+print(sysS) 
+zeros = control.zero(sysS) #zeros in sensitivity 
+sysType = len(zeros)-np.count_nonzero(zeros) #system type by zeros at origin 
+# Input type for checking system error 
+sysR=np.zeros(sysType+1); #check error 
+sysR[0] = 1; 
+sysR=control.tf(1,sysR) 
+essPI=control.evalfr(control.minreal(sysS*sysR),0) 
+print('System type =' , sysType,'ess = ', essPI) 
+ 
+#System type - PID 
+sysS = control.minreal(1 /(1+DcPID*G)) #sensitivity  
+print(sysS) 
+zeros = control.zero(sysS) #zeros in sensitivity 
+sysType = len(zeros)-np.count_nonzero(zeros) #system type by zeros at origin 
+# Input type for checking system error 
+sysR=np.zeros(sysType+1); #check error 
+sysR[0] = 1; 
+sysR=control.tf(1,sysR) 
+essPID=control.evalfr(control.minreal(sysS*sysR),0) 
+print('System type =' , sysType,'ess = ', essPID) 
+ 
+# STEP-RESPONSEs with all controllers  
+plt.plot(t,yP[1],'red') 
+plt.plot(t,yPI[1], 'green') 
+plt.plot(t,yPID[1], 'blue') 
+plt.grid('on') 
+plt.xlabel('time (s)') 
+plt.ylabel('y(t)') 
+plt.xlim(0, 10);plt.ylim(0, 2) 
+plt.legend(['P-controller', 'PI-controller', 'PID-controller'])
+plt.show()
+print(control.tf([1],[1,0]))
